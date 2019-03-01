@@ -50,7 +50,7 @@ public class MyBot implements Bot {
 
         // If from all of your units less than 60% are workers
         // and you have enough resources, then create a new worker.
-        if (numberOfWorkers / (float) state.units.length < 0.5f) {
+        if (numberOfWorkers / (float) state.units.length < 0.5f && numberOfWorkers < 7 && state.time < 120) {
             if (state.resources >= Constants.WORKER_PRICE) {
                 api.spawnUnit(UnitType.WORKER);
             }
@@ -180,31 +180,31 @@ public class MyBot implements Bot {
             //OpponentInView estimatedOpponent = estimateTheFuture(unit, opponent);
 
             // ce je nasprotnik oddaljen vec kot 15 enot, se mu priblizaj
-            /*
-            float distance = MathUtil.distance(unit.x, unit.y, opponent.x, opponent.y);
-            if (distance > 6.0) {
-                */
-                api.navigationStart(unit.id, opponent.x, opponent.y);
-                /*
-            } else {
-                api.setSpeed(unit.id, Speed.NONE);
-            }
-*/
+
+            //float distance = MathUtil.distance(unit.x, unit.y, opponent.x, opponent.y);
+            //if (distance > 3.0) {
+            //} else {
+                //api.setSpeed(unit.id, Speed.NONE);
+            //}
+
             // TODO: Tukaj dodaj priblizek nasprotnikove lokacije glede na njegovo hitrost in smer
             //float aimAngle = estimate(unit, opponent);
 
             float aimAngle = MathUtil.angleBetweenUnitAndPoint(unit, opponent.x, opponent.y);
             // Based on the aiming angle turn towards the opponent.
             //if ((unit.orientationAngle - aimAngle) < 0) {
+            /*
             if (aimAngle < 0) {
                 api.setRotation(unit.id, Rotation.RIGHT);
             } else {
                 api.setRotation(unit.id, Rotation.LEFT);
             }
-
-            if (!teamfire(state, api, unit)) {
+*/
+            if (!teamfire(state, api, unit) && MathUtil.angleBetweenUnitAndPoint(unit, opponent.x, opponent.y) < 5f) {
                 api.shoot(unit.id);
             }
+
+            api.navigationStart(unit.id, opponent.x, opponent.y);
         } else if (unit.navigationPath.length == 0) {
             // Pojdi do najblizjega nasprotnika
             OpponentInView min_oiv = null;
