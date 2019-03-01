@@ -170,36 +170,72 @@ public class MyBot implements Bot {
         return opponent;
     }
 */
+
+    private static double solX;
+    private static double solY;
+
+    private static OpponentInView estimate(UnitData src, OpponentInView dst) {
+        double enemy_velocity = 7.2;
+        double bullet_velocity = 32;
+        double tx = dst.x - src.x;
+        double ty = dst.y - src.y;
+        double tvx = enemy_velocity * Math.cos(dst.orientationAngle);
+        double tvy = enemy_velocity * Math.sin(dst.orientationAngle);
+
+        // Get quadratic equation components
+        double a = tvx * tvx + tvy * tvy - bullet_velocity * bullet_velocity;
+        double b = 2 * (tvx * tx + tvy * ty);
+        double c = tx * tx + ty * ty;
+
+        // Solve quadratic
+        quad(a, b, c); // See quad(), below
+
+        // Find smallest positive solution
+        double sol = 0.0;
+        if (solX != 0.0 && solY != 0.0) {
+            double t0 = solX, t1 = solY;
+            double t = Math.min(t0, t1);
+            if (t < 0) t = Math.max(t0, t1);
+            if (t > 0) {
+                dst.x = (float)(dst.x + tvx * t);
+                dst.y = (float)(dst.y + tvy * t);
+            }
+        }
+
+        return dst;
+    }
+
+    private static void quad(double a, double b, double c) {
+        solX = 0;
+        solY = 0;
+
+        if (Math.abs(a) < 1e-6) {
+            if (Math.abs(b) < 1e-6) {
+                solX = 0.0;
+                solY = 0.0;
+            } else {
+                solX = -c / b;
+                solY = -c / b;
+            }
+        } else {
+            double disc = b * b - 4 * a * c;
+            if (disc >= 0) {
+                disc = Math.sqrt(disc);
+                a = 2 * a;
+                solX = (-b - disc) / a;
+                solY = (-b + disc) / a;
+            }
+        }
+    }
+
     private static void warriors(GameState state, Api api, UnitData unit) {
         // Get the first opponent that the unit sees.
         if (unit.opponentsInView.length > 0) {
             OpponentInView opponent = unit.opponentsInView[0];
 
-            // Calculate the aiming angle between units orientation and the opponent. The closer
-            // the angle is to 0 the closer is the unit aiming towards the opponent.
-            //OpponentInView estimatedOpponent = estimateTheFuture(unit, opponent);
-
-            // ce je nasprotnik oddaljen vec kot 15 enot, se mu priblizaj
-
-            //float distance = MathUtil.distance(unit.x, unit.y, opponent.x, opponent.y);
-            //if (distance > 3.0) {
-            //} else {
-                //api.setSpeed(unit.id, Speed.NONE);
-            //}
-
             // TODO: Tukaj dodaj priblizek nasprotnikove lokacije glede na njegovo hitrost in smer
             //float aimAngle = estimate(unit, opponent);
 
-            float aimAngle = MathUtil.angleBetweenUnitAndPoint(unit, opponent.x, opponent.y);
-            // Based on the aiming angle turn towards the opponent.
-            //if ((unit.orientationAngle - aimAngle) < 0) {
-            /*
-            if (aimAngle < 0) {
-                api.setRotation(unit.id, Rotation.RIGHT);
-            } else {
-                api.setRotation(unit.id, Rotation.LEFT);
-            }
-*/
             if (!teamfire(state, api, unit) && MathUtil.angleBetweenUnitAndPoint(unit, opponent.x, opponent.y) < 5f) {
                 api.shoot(unit.id);
             }
