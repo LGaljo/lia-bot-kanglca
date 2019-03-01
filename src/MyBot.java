@@ -3,6 +3,8 @@ import lia.*;
 
 import java.util.HashMap;
 
+import static java.lang.Double.NaN;
+
 /**
  * Initial implementation keeps picking random locations on the map
  * and sending units there. Worker units collect resources if they
@@ -171,16 +173,18 @@ public class MyBot implements Bot {
     }
 */
 
-    private static double solX;
-    private static double solY;
+    private static double solX = 0.0;
+    private static double solY = 0.0;
 
     private static OpponentInView estimate(UnitData src, OpponentInView dst) {
         double enemy_velocity = 7.2;
-        double bullet_velocity = 32;
+        double bullet_velocity = 32.0;
         double tx = dst.x - src.x;
         double ty = dst.y - src.y;
         double tvx = enemy_velocity * Math.cos(dst.orientationAngle);
         double tvy = enemy_velocity * Math.sin(dst.orientationAngle);
+
+        //float distance = MathUtil.distance(src.x, src.y, dst.x, dst.y);
 
         // Get quadratic equation components
         double a = tvx * tvx + tvy * tvy - bullet_velocity * bullet_velocity;
@@ -191,11 +195,14 @@ public class MyBot implements Bot {
         quad(a, b, c); // See quad(), below
 
         // Find smallest positive solution
-        double sol = 0.0;
-        if (solX != 0.0 && solY != 0.0) {
+        if (solX != NaN && solY != NaN) {
+            System.out.println("Got it");
             double t0 = solX, t1 = solY;
             double t = Math.min(t0, t1);
-            if (t < 0) t = Math.max(t0, t1);
+            if (t < 0) {
+                t = Math.max(t0, t1);
+                System.out.println("here t:" + t);
+            }
             if (t > 0) {
                 dst.x = (float)(dst.x + tvx * t);
                 dst.y = (float)(dst.y + tvy * t);
@@ -211,8 +218,13 @@ public class MyBot implements Bot {
 
         if (Math.abs(a) < 1e-6) {
             if (Math.abs(b) < 1e-6) {
-                solX = 0.0;
-                solY = 0.0;
+                if (Math.abs(c) < 1e-6) {
+                    solX = 0.0;
+                    solY = 0.0;
+                } else {
+                    solX = NaN;
+                    solY = NaN;
+                }
             } else {
                 solX = -c / b;
                 solY = -c / b;
@@ -234,7 +246,10 @@ public class MyBot implements Bot {
             OpponentInView opponent = unit.opponentsInView[0];
 
             // TODO: Tukaj dodaj priblizek nasprotnikove lokacije glede na njegovo hitrost in smer
-            //float aimAngle = estimate(unit, opponent);
+            OpponentInView estimatedOpponent = estimate(unit, opponent);
+
+            System.out.println("now: x:" + opponent.x + " y:" + opponent.y);
+            System.out.println("est: x:" + estimatedOpponent.x + " y:" + estimatedOpponent.y);
 
             if (!teamfire(state, api, unit) && MathUtil.angleBetweenUnitAndPoint(unit, opponent.x, opponent.y) < 5f) {
                 api.shoot(unit.id);
