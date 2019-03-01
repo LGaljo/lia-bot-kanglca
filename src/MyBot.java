@@ -2,6 +2,7 @@ import lia.api.*;
 import lia.*;
 
 import java.util.HashMap;
+import java.util.Vector;
 
 import static java.lang.Double.NaN;
 
@@ -133,7 +134,7 @@ public class MyBot implements Bot {
 
         return angleInRadians;
     }
-
+*/
     private static OpponentInView estimateTheFuture(UnitData unit, OpponentInView opponent) {
         OpponentInView previous = oiv.get(opponent.id);
 
@@ -171,8 +172,62 @@ public class MyBot implements Bot {
 
         return opponent;
     }
-*/
 
+    private static OpponentInView estimate(UnitData src, OpponentInView dest) {
+        double enemy_velocity = 0.0;
+        if (dest.speed == Speed.FORWARD) {
+            enemy_velocity = 7.2;
+        }
+        double bullet_velocity = 32.0;
+        double tvx = enemy_velocity * Math.cos(dest.orientationAngle);
+        double tvy = enemy_velocity * Math.sin(dest.orientationAngle);
+
+        double a = tvx*tvx + tvy*tvy - bullet_velocity*bullet_velocity;
+        double b = 2 * (tvx * (dest.x - src.x) + enemy_velocity * (dest.y - src.y));
+        double c = (dest.x - src.x)*(dest.x - src.x) + (dest.y - src.y)*(dest.y - src.y);
+
+        double disc = b*b - 4 * a * c;
+
+        double t = 0.0;
+        double t1 = (-b + Math.sqrt(disc)) / (2 * a);
+        double t2 = (-b - Math.sqrt(disc)) / (2 * a);
+
+        if (disc == 0) {
+            t = t1;
+        } else if (t1 < 0) {
+            t = t2;
+        } else if (t2 < 0) {
+            t = t1;
+        }
+
+        double aimX = t * tvx + dest.x;
+        double aimY = t * tvy + dest.y;
+
+        if (aimX < 0) {
+            aimX = 0;
+        }
+        if (aimY < 0) {
+            aimY = 0;
+        }
+        if (aimX > 98) {
+            aimX = 98;
+        }
+        if (aimY > 175) {
+            aimY = 175;
+        }
+
+        //System.out.println("bul: x:" + tvx + " y:" + tvy);
+        //System.out.println("moj: x:" + src.x + " y:" + src.y);
+        //System.out.println("now: x:" + dest.x + " y:" + dest.y);
+        //System.out.println("est: x:" + aimX + " y:" + aimY);
+
+        dest.x = (float)aimX;
+        dest.y = (float)aimY;
+
+
+        return dest;
+    }
+/*
     private static double solX = 0.0;
     private static double solY = 0.0;
 
@@ -212,6 +267,7 @@ public class MyBot implements Bot {
         return dst;
     }
 
+
     private static void quad(double a, double b, double c) {
         solX = 0;
         solY = 0;
@@ -239,7 +295,7 @@ public class MyBot implements Bot {
             }
         }
     }
-
+*/
     private static void warriors(GameState state, Api api, UnitData unit) {
         // Get the first opponent that the unit sees.
         if (unit.opponentsInView.length > 0) {
@@ -248,14 +304,24 @@ public class MyBot implements Bot {
             // TODO: Tukaj dodaj priblizek nasprotnikove lokacije glede na njegovo hitrost in smer
             OpponentInView estimatedOpponent = estimate(unit, opponent);
 
-            System.out.println("now: x:" + opponent.x + " y:" + opponent.y);
-            System.out.println("est: x:" + estimatedOpponent.x + " y:" + estimatedOpponent.y);
+            // Calculate the aiming angle between units orientation and the opponent. The closer
+            // the angle is to 0 the closer is the unit aiming towards the opponent.
+            float aimAngle = MathUtil.angleBetweenUnitAndPoint(unit, estimatedOpponent.x, estimatedOpponent.y);
 
-            if (!teamfire(state, api, unit) && MathUtil.angleBetweenUnitAndPoint(unit, opponent.x, opponent.y) < 5f) {
+            // Stop the unit.
+            api.setSpeed(unit.id, Speed.NONE);
+
+            // Based on the aiming angle turn towards the opponent.
+            if (aimAngle < 0) {
+                api.setRotation(unit.id, Rotation.RIGHT);
+            } else {
+                api.setRotation(unit.id, Rotation.LEFT);
+            }
+
+            if (!teamfire(state, api, unit)) {
                 api.shoot(unit.id);
             }
 
-            api.navigationStart(unit.id, opponent.x, opponent.y);
         } else if (unit.navigationPath.length == 0) {
             // Pojdi do najblizjega nasprotnika
             OpponentInView min_oiv = null;
