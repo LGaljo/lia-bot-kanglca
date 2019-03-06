@@ -116,8 +116,8 @@ public class MyBot implements Bot {
         float x2 = u2.x;
         float y2 = u2.y;
 
-        float x3 = x1 + 100;
-        float y3 = (float) Math.tan(angle1) * 100;
+        float x3 = x1 + 70;
+        float y3 = (float) Math.tan(angle1) * 70;
 
         return (float) (Math.abs((x3 - x1) * (y1 - y2) - (x1 - x2) * (y3 - y1)) /
                 Math.sqrt(Math.pow(x3 - x1, 2) + Math.pow(y3 - y1, 2)));
